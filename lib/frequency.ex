@@ -11,12 +11,12 @@ defmodule Frequency do
   def frequency([], _workers), do: %{}
 
   @spec frequency([String.t()], pos_integer) :: map
-  def frequency(texts, _workers) do
+  def frequency(texts, workers) do
     input = conform(texts)
     keys = generate_keys(input)
 
     Enum.map(keys, fn key -> %{key => input} end)
-    |> start_stream()
+    |> start_stream(workers)
     |> merge_stream()
   end
 
@@ -30,19 +30,25 @@ defmodule Frequency do
     |> String.split("")
   end
 
-  defp merge_stream(results_stream) do
-    Enum.reduce(results_stream, %{}, fn {:ok, result}, acc ->
-      Map.merge(acc, List.first(result))
+  @spec start_stream([Map.t()], number) :: Enumerable.t()
+  defp start_stream(list_map, workers) do
+    Enum.chunk_every(list_map, :erlang.ceil(workers))
+    |> Task.async_stream(&get_count/1)
+  end
+
+  defp get_count(maps) do
+    maps
+    |> Enum.reduce(%{}, fn map, acc ->
+      key = Map.keys(map) |> List.first()
+      updated = Map.update(map, key, 0, fn vlist -> Enum.count(vlist, fn it -> it == key end) end)
+      Map.merge(acc, updated)
     end)
   end
 
-  @spec start_stream([Map.t()]) :: Enumerable.t()
-  defp start_stream(list_map) do
-    Task.async_stream(list_map, &get_count/1)
-  end
-
-  defp get_count(map) do
-    map |> Enum.map(fn {k, list} -> %{k => Enum.count(list, fn it -> it == k end)} end)
+  defp merge_stream(results_stream) do
+    Enum.reduce(results_stream, %{}, fn {:ok, result}, acc ->
+      Map.merge(acc, result)
+    end)
   end
 
   @spec generate_keys([String.t()]) :: list
