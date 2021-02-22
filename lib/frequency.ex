@@ -6,22 +6,29 @@ defmodule Frequency do
 
   The number of worker processes to use can be set with 'workers'.
   """
+
+  def frequency([], _workers), do: %{}
   @spec frequency([String.t()], pos_integer) :: map
   def frequency(texts, _workers) do
-    input = List.first(texts)
+    input = flatten(texts)
 
     cond do
-      is_nil(input) ->
-        %{}
-
-      String.replace(input, " ", "") |> String.length() == 0 ->
+      Enum.count(input) == 0 ->
         %{}
 
       true ->
-        test = String.replace(input, " ", "")
-        length = String.downcase(test) |> String.length()
-        firstChar = String.first(test)
-        %{firstChar => length}
+        # strang = " jsdfk sjfdjsfjsdfjk sjf I am the very model of a modern " |> String.replace(" ","")
+        keys =
+          input
+          |> Enum.uniq()
+          |> Enum.filter(fn el -> el != "" end)
+
+        Enum.flat_map(keys, fn x -> %{x => Enum.count(input, fn y -> y == x end)} end)
     end
+  end
+
+  @spec flatten([String.t()]) :: list
+  defp flatten(list_strings) do
+    Enum.join(list_strings) |> String.replace(" ", "") |> String.downcase() |> String.split("")
   end
 end
