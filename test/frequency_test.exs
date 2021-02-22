@@ -60,6 +60,7 @@ defmodule FrequencyTest do
     assert freq(List.duplicate("  ", 10000)) == %{}
   end
 
+  @tag :pending
   test "many times the same text gives a predictable result" do
     assert freq(List.duplicate("abc", 1000)) == %{"a" => 1000, "b" => 1000, "c" => 1000}
   end
